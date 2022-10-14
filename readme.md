@@ -4,7 +4,7 @@ This game is a plane war game designed by myself. I used the pygame module. The 
 
 In this game you control a plane and enemy planes. You can fire bullets and bombs. Bombs take time to reload. You need to dodge the bandit and you will fail when you collide with the bandit. The game has a score statistics system and a pause system, and has music.
 
-[Software Demo Video](https://youtu.be/dmqx7iEJsfQ)
+[Software Demo Video](https://youtu.be/qxv6Pewgi9k)
 
 # Development Environment
 
