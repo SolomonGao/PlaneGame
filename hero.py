@@ -87,5 +87,6 @@ class Hero(GameSprite):
         self.rect.bottom = SCREEN_RECT.bottom - 120
         self.die = False
         self.stop = False
+        self.bomb_num = 3
 
         

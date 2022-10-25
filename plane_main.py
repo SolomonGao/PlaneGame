@@ -1,3 +1,4 @@
+
 from pygame import *
 from enemy import *
 from plane_sprites import *
@@ -6,6 +7,13 @@ from hero import *
 from score import *
 from pause import *
 from bullet import *
+from restart import *
+from highScore import *
+from username import *
+from password import *
+from signup import *
+from api import *
+from login import *
 
 class PlaneGame(object):
     pygame.init()
@@ -20,6 +28,10 @@ class PlaneGame(object):
         pygame.mixer.music.load("sounds/bgm.ogg")
         pygame.mixer.music.set_volume(0.2)
         pygame.mixer.music.play(-1)
+        self.loged_in = False
+        self.type_username = False
+        self.type_passwords = False
+        self.db = MyDatabase()
         
         self.boom_sound = pygame.mixer.Sound("sounds/boom.wav")
         self.boom_sound.set_volume(0.6)
@@ -33,6 +45,8 @@ class PlaneGame(object):
         self.pause_font = pygame.font.SysFont("arial", 50)
         self.bomb_num = pygame.font.SysFont("arial", 24)
         self.game_over = pygame.font.SysFont("arial", 50)
+        self.username = pygame.font.SysFont("arial", 18)
+        self.password = pygame.font.SysFont("arial", 18)
         pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 1000)
         pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 2000)
         pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 5000)
@@ -70,10 +84,15 @@ class PlaneGame(object):
         self.enemies_group = pygame.sprite.Group()
 
         self.hero = Hero()
-
         self.score_Score = Score()
-
         self.pause = Pause()
+        self.restart = Restart()
+        self.show_score = HighScore()
+        self.user = Account()
+        self.passwords = Passwords()
+        self.signup = SignUp()
+        self.login = LogIn()
+        self.db = self.db.getDb()
 
 
     
@@ -82,47 +101,106 @@ class PlaneGame(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.__game_over()
-            
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and self.pause.rect.collidepoint(event.pos):
-                    self.pause.paused = not self.pause.paused
 
-            elif event.type == MOUSEMOTION:
-                if self.pause.rect.collidepoint(event.pos):
-                    if self.pause.paused:
-                        self.pause.image = self.pause.resume_pressed
+            # start menu event
+            if not self.loged_in:
+                if self.passwords.input == "":
+                    self.passwords.input = "PASSWORDS"
+                if self.user.input == "":
+                    self.user.input == "USERNAME"
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1 and self.user.rect.collidepoint(event.pos):
+                        self.type_username = True
+                        self.type_passwords = False
+                    elif event.button == 1 and self.passwords.rect.collidepoint(event.pos):
+                        self.type_passwords = True
+                        self.type_username = False
+                    elif event.button == 1 and self.signup.rect.collidepoint(event.pos):
+                        if self.user.input and self.passwords.input:
+                            result = self.db.collection("Account").document(self.user.input).get()
+                            if not result.exists:
+                                data = {self.user.input : self.passwords.input,
+                                        "Highest": 0}
+                                self.db.collection("Account").document(self.user.input).set(data)
+                                print("创建账号成功")
+                            else:
+                                print("该账号已存在")
+                    elif event.button == 1 and self.login.rect.collidepoint(event.pos):
+                            if self.user.input and self.passwords.input:
+                                result = self.db.collection("Account").document(self.user.input).get()
+                                if result.exists:
+                                    data = result.to_dict()
+                                    if data[self.user.input] == self.passwords.input:
+                                        print("登录成功")
+                                        self.loged_in = True
+                                    else:
+                                        print("密码错误")
+                                else:
+                                    print("没有此账号")
+
+                
+                if self.type_username:
+                    if event.type == pygame.KEYDOWN:
+                        if 97 <= event.key <= 122:
+                            self.user.input += chr(event.key)
+                        elif 48 <= event.key <= 58:
+                            self.user.input += chr(event.key)
+                        elif event.key == 8:
+                            self.user.input = self.user.input[:-1]
+                
+                elif self.type_passwords:
+                    if event.type == pygame.KEYDOWN:
+                        if 97 <= event.key <= 122:
+                            self.passwords.input += chr(event.key)
+                        elif 48 <= event.key <= 58:
+                            self.passwords.input += chr(event.key)
+                        elif event.key == 8:
+                            self.passwords.input = self.passwords.input[:-1]
+
+
+            if self.loged_in:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1 and self.pause.rect.collidepoint(event.pos):
+                        self.pause.paused = not self.pause.paused
+                    elif event.button == 1 and self.restart.rect.collidepoint(event.pos) and self.hero.stop:
+                        self.__reset()
+
+                elif event.type == MOUSEMOTION:
+                    if self.pause.rect.collidepoint(event.pos):
+                        if self.pause.paused:
+                            self.pause.image = self.pause.resume_pressed
+                        else:
+                            self.pause.image = self.pause.pause_pressed
                     else:
-                        self.pause.image = self.pause.pause_pressed
-                else:
-                    if self.pause.paused:
-                        self.pause.image = self.pause.resume
-                    else:
-                        self.pause.image = self.pause.pause
+                        if self.pause.paused:
+                            self.pause.image = self.pause.resume
+                        else:
+                            self.pause.image = self.pause.pause
 
-            if not self.pause.paused and not self.hero.stop:      
+                if not self.pause.paused and not self.hero.stop:      
 
-                if event.type == CREATE_SMALL_ENEMY_EVENT:
-                    enemy = SmallEnemy()
-                    self.small_enemy_group.add(enemy)
-                    self.enemies_group.add(enemy)
-                elif event.type == CREATE_MID_ENEMY_EVENT:
-                    enemy = MidEnemy()
-                    self.mid_enemy_group.add(enemy)
-                    self.enemies_group.add(enemy)
-                elif event.type == CREATE_LARGE_ENEMY_EVENT:
-                    enemy = LargeEnemy()
-                    self.large_enemy_group.add(enemy)
-                    self.enemies_group.add(enemy)
-                elif event.type == RELOAD_BOMB_EVENT and self.hero.bomb_num < 3:
-                    self.hero.bomb_num += 1
-                elif event.type == HERO_FIRE_EVENT:
-                    self.hero.fire()
-                elif event.type == KEYDOWN:
-                    if event.key == K_TAB:
-                        if self.hero.bomb_num > 0:
-                            self.hero.bomb()
+                    if event.type == CREATE_SMALL_ENEMY_EVENT:
+                        enemy = SmallEnemy()
+                        self.small_enemy_group.add(enemy)
+                        self.enemies_group.add(enemy)
+                    elif event.type == CREATE_MID_ENEMY_EVENT:
+                        enemy = MidEnemy()
+                        self.mid_enemy_group.add(enemy)
+                        self.enemies_group.add(enemy)
+                    elif event.type == CREATE_LARGE_ENEMY_EVENT:
+                        enemy = LargeEnemy()
+                        self.large_enemy_group.add(enemy)
+                        self.enemies_group.add(enemy)
+                    elif event.type == RELOAD_BOMB_EVENT and self.hero.bomb_num < 3:
+                        self.hero.bomb_num += 1
+                    elif event.type == HERO_FIRE_EVENT:
+                        self.hero.fire()
+                    elif event.type == KEYDOWN:
+                        if event.key == K_TAB:
+                            if self.hero.bomb_num > 0:
+                                self.hero.bomb()
                         
-        if not self.pause.paused:
+        if not self.pause.paused and self.loged_in:
             self.hero.move()
         
 
@@ -130,103 +208,120 @@ class PlaneGame(object):
         
         
         self.back_group.draw(self.screen)
-        if not self.pause.paused and not self.hero.stop :
+        # start menu
+        if not self.pause.paused and not self.hero.stop:
             self.back_group.update()
-            # enemy
-            for enemy in self.large_enemy_group:
-                if not enemy.die:
-                    if enemy.life > 6:
-                        self.screen.blit(enemy.image, enemy.rect)
+            if not self.loged_in:
+                self.screen.blit(self.user.image, self.user.rect)
+                self.screen.blit(self.passwords.image, self.passwords.rect)
+                self.username_input = self.username.render(self.user.input, True, BLACK)
+                self.screen.blit(self.username_input, (self.user.rect.left + 20, self.user.rect.top + 10))
+
+                self.passwords_input = self.password.render(self.passwords.input, True, BLACK)
+                self.screen.blit(self.passwords_input, (self.passwords.rect.left + 20, self.passwords.rect.top + 10))
+
+                self.screen.blit(self.signup.image, self.signup.rect)
+                self.screen.blit(self.login.image, self.login.rect)
+
+            if self.loged_in:
+                # enemy
+                for enemy in self.large_enemy_group:
+                    if not enemy.die:
+                        if enemy.life > 6:
+                            self.screen.blit(enemy.image, enemy.rect)
+                        else:
+                            self.screen.blit(enemy.image_hit, enemy.rect)
+
+                        enemy.update()
+
+                        # draw the health power
+                        pygame.draw.line(self.screen, BLACK, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right, enemy.rect.top - 5), 2)
+
+                        get_hit = (LargeEnemy.life -enemy.life) / LargeEnemy.life
+
+                        pygame.draw.line(self.screen, GREEN, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right - (enemy.rect.right - enemy.rect.left) * get_hit, enemy.rect.top - 5), 2)
+
                     else:
-                        self.screen.blit(enemy.image_hit, enemy.rect)
+                        if not self.delay % 5:
+                            self.screen.blit(enemy.destory_images[self.e3_destory_index], enemy.rect)
+                            self.e3_destory_index = (self.e3_destory_index + 1) % 6
+                            if self.e3_destory_index == 0:
+                                enemy.kill()
+                                self.score_Score.score += 10000
 
-                    enemy.update()
+                for enemy in self.mid_enemy_group:
+                    if not enemy.die:
+                        if enemy.life > 3:
+                            self.screen.blit(enemy.image, enemy.rect)
+                        else:
+                            self.screen.blit(enemy.image_hit, enemy.rect)
+                        
+                        enemy.update()
 
-                    # draw the health power
-                    pygame.draw.line(self.screen, BLACK, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right, enemy.rect.top - 5), 2)
+                        # draw the health power
+                        pygame.draw.line(self.screen, BLACK, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right, enemy.rect.top - 5), 2)
 
-                    get_hit = (LargeEnemy.life -enemy.life) / LargeEnemy.life
+                        get_hit = (MidEnemy.life -enemy.life) / MidEnemy.life
 
-                    pygame.draw.line(self.screen, GREEN, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right - (enemy.rect.right - enemy.rect.left) * get_hit, enemy.rect.top - 5), 2)
+                        pygame.draw.line(self.screen, GREEN, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right - (enemy.rect.right - enemy.rect.left) * get_hit, enemy.rect.top - 5), 2)
 
-                else:
-                    if not self.delay % 5:
-                        self.screen.blit(enemy.destory_images[self.e3_destory_index], enemy.rect)
-                        self.e3_destory_index = (self.e3_destory_index + 1) % 6
-                        if self.e3_destory_index == 0:
-                            enemy.kill()
-                            self.score_Score.score += 10000
-
-            for enemy in self.mid_enemy_group:
-                if not enemy.die:
-                    if enemy.life > 3:
-                        self.screen.blit(enemy.image, enemy.rect)
                     else:
-                        self.screen.blit(enemy.image_hit, enemy.rect)
-                    
-                    enemy.update()
+                        if not self.delay % 5:
+                            self.screen.blit(enemy.destory_images[self.e2_destory_index], enemy.rect)
+                            self.e2_destory_index = (self.e2_destory_index + 1) % 4
+                            if self.e2_destory_index == 0:
+                                enemy.kill()
+                                self.score_Score.score += 5000
+                
+                for enemy in self.small_enemy_group:
+                    if not enemy.die:
+                        self.screen.blit(enemy.image, enemy.rect)
+                        enemy.update()
+                    else:
+                        if not self.delay % 5:
+                            self.screen.blit(enemy.destory_images[self.e1_destory_index], enemy.rect)
+                            self.e1_destory_index = (self.e1_destory_index + 1) % 4
+                            if self.e1_destory_index == 0:
+                                enemy.kill()
+                                self.score_Score.score += 1000
 
-                    # draw the health power
-                    pygame.draw.line(self.screen, BLACK, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right, enemy.rect.top - 5), 2)
+                # Bullet
+                self.hero.bullet_group.update()
+                self.hero.bullet_group.draw(self.screen)
 
-                    get_hit = (MidEnemy.life -enemy.life) / MidEnemy.life
+                # Hero
+                if not self.hero.die:
+                    if self.switch:
+                        self.screen.blit(self.hero.image, self.hero.rect)
+                    else:
+                        self.screen.blit(self.hero.image2, self.hero.rect)
+                    # Switch the image 0.25 s once
+                    if not (self.delay % 5):
+                        self.switch = not self.switch
 
-                    pygame.draw.line(self.screen, GREEN, (enemy.rect.left, enemy.rect.top - 5), (enemy.rect.right - (enemy.rect.right - enemy.rect.left) * get_hit, enemy.rect.top - 5), 2)
-
+                    self.hero.update()
                 else:
                     if not self.delay % 5:
-                        self.screen.blit(enemy.destory_images[self.e2_destory_index], enemy.rect)
-                        self.e2_destory_index = (self.e2_destory_index + 1) % 4
-                        if self.e2_destory_index == 0:
-                            enemy.kill()
-                            self.score_Score.score += 5000
-            
-            for enemy in self.small_enemy_group:
-                if not enemy.die:
-                    self.screen.blit(enemy.image, enemy.rect)
-                    enemy.update()
-                else:
-                    if not self.delay % 5:
-                        self.screen.blit(enemy.destory_images[self.e1_destory_index], enemy.rect)
-                        self.e1_destory_index = (self.e1_destory_index + 1) % 4
-                        if self.e1_destory_index == 0:
-                            enemy.kill()
-                            self.score_Score.score += 1000
-
-            # Bullet
-            self.hero.bullet_group.update()
-            self.hero.bullet_group.draw(self.screen)
-
-            # Hero
-            if not self.hero.die:
-                if self.switch:
-                    self.screen.blit(self.hero.image, self.hero.rect)
-                else:
-                    self.screen.blit(self.hero.image2, self.hero.rect)
-                # Switch the image 0.25 s once
-                if not (self.delay % 5):
-                    self.switch = not self.switch
-
-                self.hero.update()
-            else:
-                if not self.delay % 5:
-                    if not self.hero.stop:
-                        self.screen.blit(self.hero.destory_images[self.my_destory_index], self.hero.rect)
-                        self.my_destory_index = (self.my_destory_index + 1) % 4
-                    if self.my_destory_index == 0:
-                        self.hero.stop = True
-                        pygame.mixer.music.stop()
-                        pygame.mixer.stop()
-                        pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 0)
-                        pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 0)
-                        pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 0)
-                        pygame.time.set_timer(HERO_FIRE_EVENT, 0)
-                        pygame.time.set_timer(RELOAD_BOMB_EVENT, 0)
+                        if not self.hero.stop:
+                            self.screen.blit(self.hero.destory_images[self.my_destory_index], self.hero.rect)
+                            self.my_destory_index = (self.my_destory_index + 1) % 4
+                        if self.my_destory_index == 0:
+                            self.hero.stop = True
+                            pygame.mixer.music.stop()
+                            pygame.mixer.stop()
+                            pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 0)
+                            pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 0)
+                            pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 0)
+                            pygame.time.set_timer(HERO_FIRE_EVENT, 0)
+                            pygame.time.set_timer(RELOAD_BOMB_EVENT, 0)
                         
 
-        if self.hero.stop:
+        # End game menu
+        if self.hero.stop and not self.restart.doesrestart:
             self.end = self.game_over.render("Game Over", True, BLACK)
             self.screen.blit(self.end, (SCREEN_RECT.centerx - 100, SCREEN_RECT.centery - 50))
+            self.screen.blit(self.restart.image, self.restart.rect)
+            self.screen.blit(self.show_score.image, self.show_score.rect)
 
         self.screen.blit(self.bomb_pic.image, (SCREEN_RECT.left + 10, SCREEN_RECT.bottom - 60))
         self.bomb_text = self.bomb_num.render(" x " + str(self.hero.bomb_num), True, BLACK)
@@ -239,7 +334,7 @@ class PlaneGame(object):
 
         if self.pause.paused:
             pause_text = self.pause_font.render("PAUSE", True, BLACK)
-            self.screen.blit(pause_text, (SCREEN_RECT.centerx - 70, SCREEN_RECT.centery - 50))
+            self.screen.blit(pause_text, (SCREEN_RECT.centerx - 70, SCREEN_RECT.centery - 100))
 
 
         
@@ -267,6 +362,20 @@ class PlaneGame(object):
             for enemy in crash:
                 enemy.die = True
     
+    def __reset(self):
+        for enemy in self.enemies_group:
+            enemy.kill()
+        self.hero.reset()
+        self.score_Score.score = 0
+        pygame.mixer.music.load("sounds/bgm.ogg")
+        pygame.mixer.music.set_volume(0.2)
+        pygame.mixer.music.play(-1)
+        pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 1000)
+        pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 2000)
+        pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 5000)
+        pygame.time.set_timer(HERO_FIRE_EVENT, 150)
+        pygame.time.set_timer(RELOAD_BOMB_EVENT, 3000)
+
     @staticmethod
     def __game_over():
         pygame.quit()

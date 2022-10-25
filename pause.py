@@ -1,4 +1,3 @@
-from turtle import width
 from plane_sprites import *
 
 PAUSE_IMAGE = "images/pause.png"
