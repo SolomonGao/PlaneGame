@@ -9,7 +9,7 @@ class SignUp(GameSprite):
     def __init__(self):
         super().__init__(BLANK_IMAGE)
 
-        self.image = pygame.image.load(BLANK_IMAGE)
+        # self.image = pygame.image.load(BLANK_IMAGE)
         self.image = pygame.transform.scale(self.image,(70, 50))
         self.rect = self.image.get_rect()
         self.rect.left = SCREEN_RECT.centerx + 70

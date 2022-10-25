@@ -9,7 +9,7 @@ class Passwords(GameSprite):
     def __init__(self):
         super().__init__(BLANK_IMAGE)
 
-        self.image = pygame.image.load(BLANK_IMAGE)
+        # self.image = pygame.image.load(BLANK_IMAGE)
         self.image = pygame.transform.scale(self.image,(300, 50))
         self.show = False
         self.rect = self.image.get_rect()

@@ -9,7 +9,6 @@ from score import *
 from pause import *
 from bullet import *
 from restart import *
-from highScore import *
 from username import *
 from password import *
 from signup import *
@@ -61,6 +60,8 @@ class PlaneGame(object):
         self._no_username = pygame.font.SysFont("arial", 18)
         self._signup_success = pygame.font.SysFont("arial", 18)
 
+        self._highest_score = pygame.font.SysFont("arial", 43)
+
         pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 1000)
         pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 2000)
         pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 5000)
@@ -101,7 +102,6 @@ class PlaneGame(object):
         self.score_Score = Score()
         self.pause = Pause()
         self.restart = Restart()
-        self.show_score = HighScore()
         self.user = Account()
         self.passwords = Passwords()
         self.signup = SignUp()
@@ -367,12 +367,14 @@ class PlaneGame(object):
             self.end = self.game_over.render("Game Over", True, BLACK)
             self.screen.blit(self.end, (SCREEN_RECT.centerx - 100, SCREEN_RECT.centery - 50))
             self.screen.blit(self.restart.image, self.restart.rect)
-            self.screen.blit(self.show_score.image, self.show_score.rect)
             result = self.db.collection("Account").document(self.user.input).get()
             result = result.to_dict()
             highest_score = result["Highest"]
             if self.score_Score.score > highest_score:
                 self.db.collection("Account").document(self.user.input).update({"Highest" : self.score_Score.score})
+                highest_score = self.score_Score.score
+            self.highest_score = self._highest_score.render("Your record: " + str(highest_score), True, BLACK)  
+            self.screen.blit(self.highest_score, (SCREEN_RECT.centerx - 150, SCREEN_RECT.centery - 150))
 
         self.screen.blit(self.bomb_pic.image, (SCREEN_RECT.left + 10, SCREEN_RECT.bottom - 60))
         self.bomb_text = self.bomb_num.render(" x " + str(self.hero.bomb_num), True, BLACK)
