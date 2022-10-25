@@ -13,6 +13,7 @@ RELOAD_BOMB_EVENT = pygame.USEREVENT + 4
 BLACK = (0,0,0)
 GREEN = (0,255,0)
 WHITE = (255,255,255)
+HIT_LOCATION = (SCREEN_RECT.centerx - 80, SCREEN_RECT.bottom - 80)
 
 class GameSprite(pygame.sprite.Sprite):
 

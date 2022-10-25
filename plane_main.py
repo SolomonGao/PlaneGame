@@ -1,4 +1,5 @@
 
+from doctest import FAIL_FAST
 from pygame import *
 from enemy import *
 from plane_sprites import *
@@ -47,6 +48,19 @@ class PlaneGame(object):
         self.game_over = pygame.font.SysFont("arial", 50)
         self.username = pygame.font.SysFont("arial", 18)
         self.password = pygame.font.SysFont("arial", 18)
+        self._login_hit = pygame.font.SysFont("arial", 18)
+        self._signup_hit = pygame.font.SysFont("arial", 18)
+
+        self.exist_hit = "This account had been used"
+        self.wrong_passwords_hit = "Passwords incorrect"
+        self.no_username_hit = "This username doesn't exsit"
+        self.signup_success_hit = "Create account successfully"
+
+        self._exist = pygame.font.SysFont("arial", 18)
+        self._wrong_passwords = pygame.font.SysFont("arial", 18)
+        self._no_username = pygame.font.SysFont("arial", 18)
+        self._signup_success = pygame.font.SysFont("arial", 18)
+
         pygame.time.set_timer(CREATE_SMALL_ENEMY_EVENT, 1000)
         pygame.time.set_timer(CREATE_MID_ENEMY_EVENT, 2000)
         pygame.time.set_timer(CREATE_LARGE_ENEMY_EVENT, 5000)
@@ -104,17 +118,19 @@ class PlaneGame(object):
 
             # start menu event
             if not self.loged_in:
-                if self.passwords.input == "":
+                if self.passwords.input == "" and not self.type_passwords:
                     self.passwords.input = "PASSWORDS"
-                if self.user.input == "":
-                    self.user.input == "USERNAME"
+                if self.user.input == "" and not self.type_username:
+                    self.user.input = "USERNAME"
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1 and self.user.rect.collidepoint(event.pos):
                         self.type_username = True
                         self.type_passwords = False
+                        self.user.input = ""
                     elif event.button == 1 and self.passwords.rect.collidepoint(event.pos):
                         self.type_passwords = True
                         self.type_username = False
+                        self.passwords.input = ""
                     elif event.button == 1 and self.signup.rect.collidepoint(event.pos):
                         if self.user.input and self.passwords.input:
                             result = self.db.collection("Account").document(self.user.input).get()
@@ -122,23 +138,34 @@ class PlaneGame(object):
                                 data = {self.user.input : self.passwords.input,
                                         "Highest": 0}
                                 self.db.collection("Account").document(self.user.input).set(data)
-                                print("创建账号成功")
+                                self.login.wrong_passwords = False
+                                self.login.not_exsit = False
+                                self.signup.exist = False
+                                self.signup.success = True
                             else:
-                                print("该账号已存在")
+                                self.login.wrong_passwords = False
+                                self.login.not_exsit = False
+                                self.signup.exist = True
+                                self.signup.success = False
                     elif event.button == 1 and self.login.rect.collidepoint(event.pos):
                             if self.user.input and self.passwords.input:
                                 result = self.db.collection("Account").document(self.user.input).get()
                                 if result.exists:
                                     data = result.to_dict()
                                     if data[self.user.input] == self.passwords.input:
-                                        print("登录成功")
                                         self.loged_in = True
                                     else:
-                                        print("密码错误")
+                                        self.login.wrong_passwords = True
+                                        self.login.not_exsit = False
+                                        self.signup.exist = False
+                                        self.signup.success = False
                                 else:
-                                    print("没有此账号")
+                                    self.login.not_exsit = True
+                                    self.login.wrong_passwords = False
+                                    self.signup.exist = False
+                                    self.signup.success = False
 
-                
+                # username input
                 if self.type_username:
                     if event.type == pygame.KEYDOWN:
                         if 97 <= event.key <= 122:
@@ -147,7 +174,7 @@ class PlaneGame(object):
                             self.user.input += chr(event.key)
                         elif event.key == 8:
                             self.user.input = self.user.input[:-1]
-                
+                # passwords input
                 elif self.type_passwords:
                     if event.type == pygame.KEYDOWN:
                         if 97 <= event.key <= 122:
@@ -222,6 +249,25 @@ class PlaneGame(object):
 
                 self.screen.blit(self.signup.image, self.signup.rect)
                 self.screen.blit(self.login.image, self.login.rect)
+
+                self.signup_hit = self._signup_hit.render(self.signup.hit, True, BLACK)
+                self.screen.blit(self.signup_hit, (self.signup.rect.left + 10, self.signup.rect.top + 10))
+                self.login_hit = self._login_hit.render(self.login.hit, True, BLACK)
+                self.screen.blit(self.login_hit, (self.login.rect.left + 15, self.login.rect.top + 10))
+
+                self.exist = self._exist.render(self.exist_hit, True, BLACK)
+                self.signup_success = self._signup_success.render(self.signup_success_hit, True, BLACK)
+                self.wrong_passwords = self._wrong_passwords.render(self.wrong_passwords_hit, True, BLACK)
+                self.no_username = self._no_username.render(self.no_username_hit, True, BLACK)
+
+                if self.signup.exist:
+                    self.screen.blit(self.exist, HIT_LOCATION)
+                if self.signup.success:
+                    self.screen.blit(self.signup_success, HIT_LOCATION)
+                if self.login.wrong_passwords:
+                    self.screen.blit(self.wrong_passwords, HIT_LOCATION)
+                if self.login.not_exsit:
+                    self.screen.blit(self.no_username, HIT_LOCATION)
 
             if self.loged_in:
                 # enemy
