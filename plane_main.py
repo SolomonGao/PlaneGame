@@ -243,8 +243,11 @@ class PlaneGame(object):
                 self.screen.blit(self.passwords.image, self.passwords.rect)
                 self.username_input = self.username.render(self.user.input, True, BLACK)
                 self.screen.blit(self.username_input, (self.user.rect.left + 20, self.user.rect.top + 10))
+                starts = ""
+                for i in range(len(self.passwords.input)):
+                    starts += "*"
+                self.passwords_input = self.password.render(starts, True, BLACK)
 
-                self.passwords_input = self.password.render(self.passwords.input, True, BLACK)
                 self.screen.blit(self.passwords_input, (self.passwords.rect.left + 20, self.passwords.rect.top + 10))
 
                 self.screen.blit(self.signup.image, self.signup.rect)
