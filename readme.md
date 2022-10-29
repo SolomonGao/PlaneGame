@@ -9,7 +9,7 @@ Using google firebase to store accounts infomation.
 Allow user to sign up and login. 
 Store the heighest score for every account
 
-[Software Demo Video](https://youtu.be/qxv6Pewgi9k)
+[Software Demo Video](https://youtu.be/S-oA7ySYBpE)
 
 # Development Environment
 
